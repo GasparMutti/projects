@@ -70,11 +70,11 @@ class Tetris {
     },
   };
 
-  constructor({canvasId, scoreId, styles,sounds}) {
+  constructor({canvasId, scoreId, styles, sounds}) {
     this.canvasId = canvasId;
     this.scoreId = scoreId;
     this.styles = styles;
-    this.sounds = sounds
+    this.sounds = sounds;
     this.isPaused = true;
     this.defaultGameSpeed = 300;
     this.time = Date.now();
@@ -84,7 +84,7 @@ class Tetris {
 
   init() {
     this.initDomElements();
-    this.initSounds()
+    this.initSounds();
     this.initBoard();
     this.initGamePiece();
     this.initControls();
@@ -100,7 +100,7 @@ class Tetris {
 
     window.addEventListener("resize", () => {
       this.setCanvas();
-      this.drawBoard();
+      this.drawGameBoard();
       this.drawGamePiece();
     });
   }
@@ -114,7 +114,7 @@ class Tetris {
     const {ROWS} = Tetris;
     return innerWidth <= 300
       ? 28
-      : Math.floor(innerHeight / ROWS - (2 % innerHeight));
+      : Math.floor(innerHeight / ROWS - (4 % innerHeight));
   }
 
   setCanvasSize() {
@@ -126,17 +126,17 @@ class Tetris {
     this.ctx.scale(this.blockSize, this.blockSize);
   }
 
-  initSounds(){
-    this.sounds.gameTheme.loop = true
-    this.sounds.gameTheme.volume = .5
+  initSounds() {
+    this.sounds.gameTheme.loop = true;
+    this.sounds.gameTheme.volume = 0.2;
   }
 
   initBoard() {
-    this.board = this.createBoard();
-    this.drawBoard();
+    this.gameBoard = this.createGameBoard();
+    this.drawGameBoard();
   }
 
-  createBoard() {
+  createGameBoard() {
     const {ROWS, COLUMNS} = Tetris;
     const {color, borderColor, borderWidth} = this.styles.boardSquare;
     const board = [];
@@ -161,8 +161,8 @@ class Tetris {
     return board;
   }
 
-  drawBoard() {
-    this.board.forEach((row) => {
+  drawGameBoard() {
+    this.gameBoard.forEach((row) => {
       row.forEach((square) => {
         square.draw(this.ctx);
       });
@@ -241,8 +241,8 @@ class Tetris {
       row.find(
         (square) =>
           square.color !== emptyColor &&
-          this.board[square.position.y + y]?.[square.position.x + x]?.color !==
-            boardColor
+          this.gameBoard[square.position.y + y]?.[square.position.x + x]
+            ?.color !== boardColor
       )
     );
   }
@@ -253,7 +253,8 @@ class Tetris {
     this.gamePiece.canvasPiece.forEach((row) =>
       row.forEach((square) => {
         if (square.color !== emptyColor)
-          this.board[square.position.y][square.position.x].color = square.color;
+          this.gameBoard[square.position.y][square.position.x].color =
+            square.color;
       })
     );
   }
@@ -290,7 +291,8 @@ class Tetris {
 
   attemptMoveLeft() {
     const {canvasPiece: gamePiece} = this.gamePiece;
-    if (this.checkPieceCollision(gamePiece, 0, -1)) return this.sounds.gameError.play();
+    if (this.checkPieceCollision(gamePiece, 0, -1))
+      return this.sounds.gameError.play();
     this.moveGamePiece(0, -1);
   }
 
@@ -300,14 +302,15 @@ class Tetris {
       this.solidifyGamePiece();
       this.deleteFullRows();
       this.setGamePiece();
-      return
+      return;
     }
     this.moveGamePiece(1, 0);
   }
 
   attemptMoveRight() {
     const {canvasPiece: gamePiece} = this.gamePiece;
-    if (this.checkPieceCollision(gamePiece, 0, 1)) return this.sounds.gameError.play();
+    if (this.checkPieceCollision(gamePiece, 0, 1))
+      return this.sounds.gameError.play();
     this.moveGamePiece(0, 1);
   }
 
@@ -320,7 +323,8 @@ class Tetris {
       position,
     });
 
-    if (this.checkPieceCollision(rotatedCanvasPiece)) return this.sounds.gameError.play();
+    if (this.checkPieceCollision(rotatedCanvasPiece))
+      return this.sounds.gameError.play();
 
     this.gamePiece.tetromino = rotatedTetromino;
     this.gamePiece.canvasPiece = rotatedCanvasPiece;
@@ -340,8 +344,10 @@ class Tetris {
     const {color: boardColor} = this.styles.boardSquare;
     const rowsToDelete = [];
 
-    this.board.forEach((row, indexRow) => {
-      if (this.board[indexRow].every((square) => square.color !== boardColor))
+    this.gameBoard.forEach((row, indexRow) => {
+      if (
+        this.gameBoard[indexRow].every((square) => square.color !== boardColor)
+      )
         rowsToDelete.push(indexRow);
     });
 
@@ -372,27 +378,27 @@ class Tetris {
     if (!rowsToDelete.length) return;
 
     this.pauseGame();
-    this.sounds.gameTheme.play()
+    this.sounds.gameTheme.play();
 
     for (let rowIndex = rowsToDelete.length - 1; rowIndex >= 0; rowIndex--) {
       const indexRow = rowsToDelete[rowIndex];
 
-      this.board[indexRow].forEach((square) => (square.color = "red"));
-      this.drawBoard();
+      this.gameBoard[indexRow].forEach((square) => (square.color = "red"));
+      this.drawGameBoard();
     }
 
     await this.timeout(300);
 
     for (let rowIndex = rowsToDelete.length - 1; rowIndex >= 0; rowIndex--) {
       const indexRow = rowsToDelete[rowIndex];
-      this.board.forEach((row) =>
+      this.gameBoard.forEach((row) =>
         row.forEach((square) => {
           square.position.y <= indexRow && square.position.y++;
         })
       );
 
-      this.board.splice(indexRow, 1);
-      this.board.unshift(this.createEmptyRow());
+      this.gameBoard.splice(indexRow, 1);
+      this.gameBoard.unshift(this.createEmptyRow());
 
       this.score += 100;
       this.updateScore();
@@ -400,7 +406,7 @@ class Tetris {
       if (this.gameSpeed > 100) this.gameSpeed -= 10;
       rowsToDelete[rowIndex - 1] && rowsToDelete[rowIndex - 1]++;
     }
-    this.sounds.gameScore.play()
+    this.sounds.gameScore.play();
     this.resumeGame();
   }
 
@@ -416,8 +422,8 @@ class Tetris {
   checkGameOver() {
     const {canvasPiece: gamePiece} = this.gamePiece;
     if (this.checkPieceCollision(gamePiece)) {
+      this.sounds.gameOver.play();
       this.resetGame();
-      this.sounds.gameOver.play()
       alert("perdiste");
     }
   }
@@ -425,28 +431,28 @@ class Tetris {
   resetGame() {
     this.resetScore();
     this.initBoard();
-    this.setGamePiece();
+    this.initGamePiece();
     this.pauseGame();
-    this.resetSounds()
+    this.resetSounds();
     this.gameSpeed = this.defaultGameSpeed;
   }
 
-  resetSounds(){
-    this.sounds.gameTheme.currentTime = 0
-    this.sounds.gameOver.currentTime = 0
-    this.sounds.gameError.currentTime = 0
-    this.sounds.gameScore.currentTime = 0
+  resetSounds() {
+    this.sounds.gameTheme.currentTime = 0;
+    this.sounds.gameOver.currentTime = 0;
+    this.sounds.gameError.currentTime = 0;
+    this.sounds.gameScore.currentTime = 0;
   }
 
   resumeGame() {
     this.isPaused = false;
-    this.sounds.gameTheme.play()
+    this.sounds.gameTheme.play();
     this.loopId = requestAnimationFrame(this.loop.bind(this));
   }
 
   pauseGame() {
     this.isPaused = true;
-    this.sounds.gameTheme.pause()
+    this.sounds.gameTheme.pause();
     cancelAnimationFrame(this.loopId);
   }
 
@@ -454,10 +460,15 @@ class Tetris {
     this.isPaused ? this.resumeGame() : this.pauseGame();
   }
 
+  handleMute() {
+    this.sounds.gameTheme.muted = this.sounds.gameTheme.muted ? false : true;
+  }
+
   initControls() {
     const handleKeydown = ({key}) => {
       const handleKey = {
         p: () => this.handlePauseGame(),
+        m: () => this.handleMute(),
         w: () => this.attemptRotate(),
         a: () => this.attemptMoveLeft(),
         s: () => this.attemptMoveDown(),
@@ -501,7 +512,7 @@ class Tetris {
       this.time = this.now;
     }
 
-    this.drawBoard();
+    this.drawGameBoard();
     this.drawGamePiece();
 
     this.loopId = requestAnimationFrame(this.loop.bind(this));
@@ -524,9 +535,8 @@ const tetrisSounds = {
   gameTheme: new Audio("assets/gameTheme.mp3"),
   gameOver: new Audio("assets/gameOver.mp3"),
   gameError: new Audio("assets/gameError.mp3"),
-  gameScore: new Audio("assets/gameScore.mp3")
-}
-
+  gameScore: new Audio("assets/gameScore.mp3"),
+};
 
 const tetrisProperties = {
   canvasId: "tetris",
