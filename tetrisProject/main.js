@@ -532,10 +532,10 @@ const tetrisStyles = {
   },
 };
 const tetrisSounds = {
-  gameTheme: new Audio("songs/gameTheme.mp3"),
-  gameOver: new Audio("songs/gameOver.mp3"),
-  gameError: new Audio("songs/gameError.mp3"),
-  gameScore: new Audio("songs/gameScore.mp3"),
+  gameTheme: new Audio("public/assets/songs/gameTheme.mp3"),
+  gameOver: new Audio("public/assets/songs/gameOver.mp3"),
+  gameError: new Audio("public/assets/songs/gameError.mp3"),
+  gameScore: new Audio("public/assets/songs/gameScore.mp3"),
 };
 
 const tetrisProperties = {
