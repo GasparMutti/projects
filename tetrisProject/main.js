@@ -70,12 +70,13 @@ class Tetris {
     },
   };
 
-  constructor({canvasId, scoreId, styles}) {
+  constructor({canvasId, scoreId, styles,sounds}) {
     this.canvasId = canvasId;
     this.scoreId = scoreId;
     this.styles = styles;
+    this.sounds = sounds
     this.isPaused = true;
-    this.gameSpeed = 300;
+    this.defaultGameSpeed = 300;
     this.time = Date.now();
     this.score = 0;
     this.init();
@@ -83,6 +84,7 @@ class Tetris {
 
   init() {
     this.initDomElements();
+    this.initSounds()
     this.initBoard();
     this.initGamePiece();
     this.initControls();
@@ -122,6 +124,11 @@ class Tetris {
     this.canvas.setAttribute("height", this.blockSize * ROWS);
 
     this.ctx.scale(this.blockSize, this.blockSize);
+  }
+
+  initSounds(){
+    this.sounds.gameTheme.loop = true
+    this.sounds.gameTheme.volume = .5
   }
 
   initBoard() {
@@ -283,7 +290,7 @@ class Tetris {
 
   attemptMoveLeft() {
     const {canvasPiece: gamePiece} = this.gamePiece;
-    if (this.checkPieceCollision(gamePiece, 0, -1)) return;
+    if (this.checkPieceCollision(gamePiece, 0, -1)) return this.sounds.gameError.play();
     this.moveGamePiece(0, -1);
   }
 
@@ -293,13 +300,14 @@ class Tetris {
       this.solidifyGamePiece();
       this.deleteFullRows();
       this.setGamePiece();
+      return
     }
     this.moveGamePiece(1, 0);
   }
 
   attemptMoveRight() {
     const {canvasPiece: gamePiece} = this.gamePiece;
-    if (this.checkPieceCollision(gamePiece, 0, 1)) return;
+    if (this.checkPieceCollision(gamePiece, 0, 1)) return this.sounds.gameError.play();
     this.moveGamePiece(0, 1);
   }
 
@@ -312,7 +320,7 @@ class Tetris {
       position,
     });
 
-    if (this.checkPieceCollision(rotatedCanvasPiece)) return;
+    if (this.checkPieceCollision(rotatedCanvasPiece)) return this.sounds.gameError.play();
 
     this.gamePiece.tetromino = rotatedTetromino;
     this.gamePiece.canvasPiece = rotatedCanvasPiece;
@@ -364,6 +372,7 @@ class Tetris {
     if (!rowsToDelete.length) return;
 
     this.pauseGame();
+    this.sounds.gameTheme.play()
 
     for (let rowIndex = rowsToDelete.length - 1; rowIndex >= 0; rowIndex--) {
       const indexRow = rowsToDelete[rowIndex];
@@ -391,7 +400,7 @@ class Tetris {
       if (this.gameSpeed > 100) this.gameSpeed -= 10;
       rowsToDelete[rowIndex - 1] && rowsToDelete[rowIndex - 1]++;
     }
-
+    this.sounds.gameScore.play()
     this.resumeGame();
   }
 
@@ -407,8 +416,9 @@ class Tetris {
   checkGameOver() {
     const {canvasPiece: gamePiece} = this.gamePiece;
     if (this.checkPieceCollision(gamePiece)) {
-      alert("perdiste");
       this.resetGame();
+      this.sounds.gameOver.play()
+      alert("perdiste");
     }
   }
 
@@ -417,16 +427,26 @@ class Tetris {
     this.initBoard();
     this.setGamePiece();
     this.pauseGame();
+    this.resetSounds()
     this.gameSpeed = this.defaultGameSpeed;
+  }
+
+  resetSounds(){
+    this.sounds.gameTheme.currentTime = 0
+    this.sounds.gameOver.currentTime = 0
+    this.sounds.gameError.currentTime = 0
+    this.sounds.gameScore.currentTime = 0
   }
 
   resumeGame() {
     this.isPaused = false;
+    this.sounds.gameTheme.play()
     this.loopId = requestAnimationFrame(this.loop.bind(this));
   }
 
   pauseGame() {
     this.isPaused = true;
+    this.sounds.gameTheme.pause()
     cancelAnimationFrame(this.loopId);
   }
 
@@ -472,7 +492,7 @@ class Tetris {
 
     this.now = Date.now();
     this.difference = this.now - this.time;
-    this.defaultGameSpeed = 300;
+    this.gameSpeed = this.defaultGameSpeed;
 
     this.checkRules();
 
@@ -488,7 +508,7 @@ class Tetris {
   }
 }
 
-const styles = {
+const tetrisStyles = {
   boardSquare: {
     color: "black",
     borderColor: "white",
@@ -500,11 +520,19 @@ const styles = {
     borderWidth: 0,
   },
 };
+const tetrisSounds = {
+  gameTheme: new Audio("assets/gameTheme.mp3"),
+  gameOver: new Audio("assets/gameOver.mp3"),
+  gameError: new Audio("assets/gameError.mp3"),
+  gameScore: new Audio("assets/gameScore.mp3")
+}
+
 
 const tetrisProperties = {
   canvasId: "tetris",
   scoreId: "score",
-  styles,
+  styles: tetrisStyles,
+  sounds: tetrisSounds,
 };
 
 const tetris = new Tetris(tetrisProperties);
