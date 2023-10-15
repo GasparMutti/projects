@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Playstation 5",
+    "description": "Consola de ultima generacion, capaz de jugar a los ultimos juegos del mercado con un rendimiento optimo y graficos en maxima calidad",
+    "price": 500000,
+    "code": "SYPL5",
+    "status": true,
+    "stock": 20,
+    "category": "consoles",
+    "image": "https://http2.mlstatic.com/D_NQ_NP_841787-MLA44484414455_012021-O.webp",
+    "owner": "admin",
+    "rate": 5,
+    "id": "1b7ba01e-59c3-475e-b202-daf6953d64e0",
+    "createdAt": "Sat, 09 Sep 2023 05:39:39 GMT",
+    "updatedAt": "Sat, 09 Sep 2023 05:39:39 GMT"
+  }
+]
