@@ -81,6 +81,7 @@ class Tetris {
     this.maxGameSpeed = 100;
     this.time = Date.now();
     this.score = 0;
+    this.maxScore = window.localStorage.getItem("maxScore") ?? 0;
   }
 
   async init() {
@@ -171,7 +172,7 @@ class Tetris {
     for (const row of gameBoard) {
       for (const square of row) {
         square.draw(this.ctx);
-        await this.timeout(10);
+        await this.timeout(5);
       }
     }
   }
@@ -395,6 +396,7 @@ class Tetris {
   async deleteFullRows() {
     const rowsToDelete = this.getRowsToDelete();
     if (!rowsToDelete.length) return;
+    console.log(rowsToDelete);
 
     this.pauseGame();
     this.sounds.background.play();
@@ -418,13 +420,14 @@ class Tetris {
 
       this.gameBoard.splice(indexRow, 1);
       this.gameBoard.unshift(this.createEmptyRow());
+      rowsToDelete.forEach((_, index) => rowsToDelete[index]++);
 
       this.score += 100;
       this.updateScore();
 
       if (this.gameSpeed > this.maxGameSpeed) this.gameSpeed -= 10;
-      rowsToDelete[rowIndex - 1] && rowsToDelete[rowIndex - 1]++;
     }
+
     this.sounds.addScore.play();
     this.resumeGame();
   }
@@ -442,8 +445,18 @@ class Tetris {
     const {canvasPiece: gamePiece} = this.gamePiece;
     if (this.checkPieceCollision(gamePiece)) {
       this.sounds.gameOver.play();
+      if (this.score > this.maxScore) {
+        this.maxScore = this.score;
+        window.localStorage.setItem("maxScore", this.maxScore);
+      }
       this.resetGame();
-      alert("perdiste");
+      alert(`
+      GAME OVER
+      SCORE:
+      ${this.score}
+      MAX SCORE:
+      ${this.maxScore}
+      `);
     }
   }
 
