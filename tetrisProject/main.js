@@ -1,9 +1,10 @@
 class Square {
-  constructor({position, color, borderColor, borderWidth}) {
+  constructor({position, color, borderColor, borderWidth, isEmpty}) {
     this.position = position;
     this.color = color;
     this.borderColor = borderColor;
     this.borderWidth = borderWidth;
+    this.isEmpty = isEmpty
   }
 
   draw(ctx) {
@@ -21,14 +22,14 @@ class Tetris {
   static COLUMNS = 10;
   static PIECES = {
     smashBoy: {
-      color: "yellow",
+      color: "goldenrod",
       tetromino: [
         [1, 1],
         [1, 1],
       ],
     },
     hero: {
-      color: "aqua",
+      color: "#0097BD",
       tetromino: [[1], [1], [1], [1]],
     },
     teewe: {
@@ -77,15 +78,15 @@ class Tetris {
     this.sounds = sounds;
     this.isPaused = true;
     this.defaultGameSpeed = 300;
+    this.maxGameSpeed = 100
     this.time = Date.now();
     this.score = 0;
-    this.init();
   }
 
   init() {
     this.initDomElements();
     this.initSounds();
-    this.initBoard();
+    this.initGameBoard();
     this.initGamePiece();
     this.initControls();
     this.loop();
@@ -112,9 +113,7 @@ class Tetris {
 
   calculateBlockSize() {
     const {ROWS} = Tetris;
-    return innerWidth <= 300
-      ? 28
-      : Math.floor(innerHeight / ROWS - (4 % innerHeight));
+      return Math.floor(innerHeight / ROWS - (5 % innerHeight)); 
   }
 
   setCanvasSize() {
@@ -127,13 +126,17 @@ class Tetris {
   }
 
   initSounds() {
-    this.sounds.gameTheme.loop = true;
-    this.sounds.gameTheme.volume = 0.2;
+    this.sounds.background.loop = true;
+    this.sounds.background.volume = 0.2;
   }
 
-  initBoard() {
-    this.gameBoard = this.createGameBoard();
+  initGameBoard() {
+    this.setGameBoard()
     this.drawGameBoard();
+  }
+
+  setGameBoard(){
+    this.gameBoard = this.createGameBoard();
   }
 
   createGameBoard() {
@@ -150,6 +153,7 @@ class Tetris {
           color,
           borderColor,
           borderWidth,
+          isEmpty: false
         };
 
         newRow.push(new Square(squareProperties));
@@ -186,7 +190,11 @@ class Tetris {
       piecesNames[Math.floor(Math.random() * piecesNames.length)];
     const {color, tetromino} = {...PIECES[randomPieceName]};
 
-    return {name: randomPieceName, color, tetromino};
+    return {
+      name: randomPieceName,
+      color,
+      tetromino
+    };
   }
 
   createCanvasPiece({color, tetromino, position}) {
@@ -203,6 +211,7 @@ class Tetris {
           color: value ? color : emptyColor,
           borderColor,
           borderWidth,
+          isEmpty: value === 0 ? true : false
         };
 
         return new Square(squareProperties);
@@ -248,11 +257,9 @@ class Tetris {
   }
 
   solidifyGamePiece() {
-    const {color: emptyColor} = this.styles.emptySquare;
-
     this.gamePiece.canvasPiece.forEach((row) =>
       row.forEach((square) => {
-        if (square.color !== emptyColor)
+        if (!square.isEmpty)
           this.gameBoard[square.position.y][square.position.x].color =
             square.color;
       })
@@ -292,7 +299,7 @@ class Tetris {
   attemptMoveLeft() {
     const {canvasPiece: gamePiece} = this.gamePiece;
     if (this.checkPieceCollision(gamePiece, 0, -1))
-      return this.sounds.gameError.play();
+      return this.sounds.failedAttempt.play();
     this.moveGamePiece(0, -1);
   }
 
@@ -310,7 +317,7 @@ class Tetris {
   attemptMoveRight() {
     const {canvasPiece: gamePiece} = this.gamePiece;
     if (this.checkPieceCollision(gamePiece, 0, 1))
-      return this.sounds.gameError.play();
+      return this.sounds.failedAttempt.play();
     this.moveGamePiece(0, 1);
   }
 
@@ -324,7 +331,7 @@ class Tetris {
     });
 
     if (this.checkPieceCollision(rotatedCanvasPiece))
-      return this.sounds.gameError.play();
+      return this.sounds.failedAttempt.play();
 
     this.gamePiece.tetromino = rotatedTetromino;
     this.gamePiece.canvasPiece = rotatedCanvasPiece;
@@ -365,6 +372,7 @@ class Tetris {
         color,
         borderColor,
         borderWidth,
+        isEmpty: false
       };
 
       emptyRow.push(new Square(squareProperties));
@@ -378,7 +386,7 @@ class Tetris {
     if (!rowsToDelete.length) return;
 
     this.pauseGame();
-    this.sounds.gameTheme.play();
+    this.sounds.background.play();
 
     for (let rowIndex = rowsToDelete.length - 1; rowIndex >= 0; rowIndex--) {
       const indexRow = rowsToDelete[rowIndex];
@@ -403,10 +411,10 @@ class Tetris {
       this.score += 100;
       this.updateScore();
 
-      if (this.gameSpeed > 100) this.gameSpeed -= 10;
+      if (this.gameSpeed > this.maxGameSpeed) this.gameSpeed -= 10;
       rowsToDelete[rowIndex - 1] && rowsToDelete[rowIndex - 1]++;
     }
-    this.sounds.gameScore.play();
+    this.sounds.addScore.play();
     this.resumeGame();
   }
 
@@ -430,7 +438,7 @@ class Tetris {
 
   resetGame() {
     this.resetScore();
-    this.initBoard();
+    this.initGameBoard();
     this.initGamePiece();
     this.pauseGame();
     this.resetSounds();
@@ -438,21 +446,21 @@ class Tetris {
   }
 
   resetSounds() {
-    this.sounds.gameTheme.currentTime = 0;
+    this.sounds.background.currentTime = 0;
     this.sounds.gameOver.currentTime = 0;
-    this.sounds.gameError.currentTime = 0;
-    this.sounds.gameScore.currentTime = 0;
+    this.sounds.failedAttempt.currentTime = 0;
+    this.sounds.addScore.currentTime = 0;
   }
 
   resumeGame() {
     this.isPaused = false;
-    this.sounds.gameTheme.play();
+    this.sounds.background.play();
     this.loopId = requestAnimationFrame(this.loop.bind(this));
   }
 
   pauseGame() {
     this.isPaused = true;
-    this.sounds.gameTheme.pause();
+    this.sounds.background.pause();
     cancelAnimationFrame(this.loopId);
   }
 
@@ -461,7 +469,9 @@ class Tetris {
   }
 
   handleMute() {
-    this.sounds.gameTheme.muted = this.sounds.gameTheme.muted ? false : true;
+    for(const sound in this.sounds){
+      this.sounds[sound].muted = !this.sounds[sound].muted
+    }
   }
 
   initControls() {
@@ -523,7 +533,7 @@ const tetrisStyles = {
   boardSquare: {
     color: "black",
     borderColor: "white",
-    borderWidth: 0.06,
+    borderWidth: .08,
   },
   emptySquare: {
     color: "transparent",
@@ -532,10 +542,10 @@ const tetrisStyles = {
   },
 };
 const tetrisSounds = {
-  gameTheme: new Audio("assets/songs/gameTheme.mp3"),
+  background: new Audio("assets/songs/background.mp3"),
   gameOver: new Audio("assets/songs/gameOver.mp3"),
-  gameError: new Audio("assets/songs/gameError.mp3"),
-  gameScore: new Audio("assets/songs/gameScore.mp3"),
+  failedAttempt: new Audio("assets/songs/failedAttempt.mp3"),
+  addScore: new Audio("assets/songs/addScore.mp3"),
 };
 
 const tetrisProperties = {
@@ -546,3 +556,4 @@ const tetrisProperties = {
 };
 
 const tetris = new Tetris(tetrisProperties);
+tetris.init()

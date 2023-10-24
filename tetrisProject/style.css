@@ -23,16 +23,17 @@ main {
 
 .tetrisContainer {
   height: 100vh;
-  background-color: black;
   display: flex;
   flex-direction: column;
+  gap: 1px;
 }
 
 .tetrisHeader {
-  flex: 1;
+  width: 100%;
   display: flex;
+  background-color: black;
   align-items: center;
-  padding: 0 12px;
+  padding: 6px 12px;
   padding-bottom: auto;
   color: white;
 }
