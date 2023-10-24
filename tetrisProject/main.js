@@ -4,7 +4,7 @@ class Square {
     this.color = color;
     this.borderColor = borderColor;
     this.borderWidth = borderWidth;
-    this.isEmpty = isEmpty
+    this.isEmpty = isEmpty;
   }
 
   draw(ctx) {
@@ -22,7 +22,7 @@ class Tetris {
   static COLUMNS = 10;
   static PIECES = {
     smashBoy: {
-      color: "goldenrod",
+      color: "#FACC15",
       tetromino: [
         [1, 1],
         [1, 1],
@@ -40,7 +40,7 @@ class Tetris {
       ],
     },
     orangeRicky: {
-      color: "orange",
+      color: "#EA580C",
       tetromino: [
         [1, 0],
         [1, 0],
@@ -78,14 +78,15 @@ class Tetris {
     this.sounds = sounds;
     this.isPaused = true;
     this.defaultGameSpeed = 300;
-    this.maxGameSpeed = 100
+    this.maxGameSpeed = 100;
     this.time = Date.now();
     this.score = 0;
   }
 
-  init() {
+  async init() {
     this.initDomElements();
     this.initSounds();
+    await this.animateGameBoard();
     this.initGameBoard();
     this.initGamePiece();
     this.initControls();
@@ -113,7 +114,7 @@ class Tetris {
 
   calculateBlockSize() {
     const {ROWS} = Tetris;
-      return Math.floor(innerHeight / ROWS - (5 % innerHeight)); 
+    return Math.floor(innerHeight / ROWS - (5 % innerHeight));
   }
 
   setCanvasSize() {
@@ -131,11 +132,11 @@ class Tetris {
   }
 
   initGameBoard() {
-    this.setGameBoard()
+    this.setGameBoard();
     this.drawGameBoard();
   }
 
-  setGameBoard(){
+  setGameBoard() {
     this.gameBoard = this.createGameBoard();
   }
 
@@ -153,7 +154,7 @@ class Tetris {
           color,
           borderColor,
           borderWidth,
-          isEmpty: false
+          isEmpty: false,
         };
 
         newRow.push(new Square(squareProperties));
@@ -163,6 +164,16 @@ class Tetris {
     }
 
     return board;
+  }
+
+  async animateGameBoard() {
+    const gameBoard = this.createGameBoard();
+    for (const row of gameBoard) {
+      for (const square of row) {
+        square.draw(this.ctx);
+        await this.timeout(10);
+      }
+    }
   }
 
   drawGameBoard() {
@@ -193,7 +204,7 @@ class Tetris {
     return {
       name: randomPieceName,
       color,
-      tetromino
+      tetromino,
     };
   }
 
@@ -211,7 +222,7 @@ class Tetris {
           color: value ? color : emptyColor,
           borderColor,
           borderWidth,
-          isEmpty: value === 0 ? true : false
+          isEmpty: value === 0 ? true : false,
         };
 
         return new Square(squareProperties);
@@ -372,7 +383,7 @@ class Tetris {
         color,
         borderColor,
         borderWidth,
-        isEmpty: false
+        isEmpty: false,
       };
 
       emptyRow.push(new Square(squareProperties));
@@ -469,8 +480,8 @@ class Tetris {
   }
 
   handleMute() {
-    for(const sound in this.sounds){
-      this.sounds[sound].muted = !this.sounds[sound].muted
+    for (const sound in this.sounds) {
+      this.sounds[sound].muted = !this.sounds[sound].muted;
     }
   }
 
@@ -533,7 +544,7 @@ const tetrisStyles = {
   boardSquare: {
     color: "black",
     borderColor: "white",
-    borderWidth: .08,
+    borderWidth: 0.08,
   },
   emptySquare: {
     color: "transparent",
@@ -556,4 +567,4 @@ const tetrisProperties = {
 };
 
 const tetris = new Tetris(tetrisProperties);
-tetris.init()
+tetris.init();
