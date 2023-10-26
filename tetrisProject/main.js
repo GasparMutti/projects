@@ -516,6 +516,16 @@ class Tetris {
   initControls() {
     const {pause, mute, restart, rotate, moveLeft, moveDown, moveRight} =
       this.controls;
+    alert(`
+      Controls:
+      Pause game: ${pause},
+      Mute game: ${mute},
+      Restart game: ${restart},
+      Rotate piece: ${rotate},
+      Move piece to left: ${moveLeft},
+      Move piece to down: ${moveDown},
+      Move piece to right: ${moveRight}
+      `);
     const handleKey = {
       [pause]: () => this.handlePauseGame(),
       [mute]: () => this.handleMute(),
