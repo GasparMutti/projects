@@ -1,3 +1,5 @@
+import {getTheme, toggleTheme} from "./public/assets/js/theme";
+
 class Square {
   constructor({position, color, borderColor, borderWidth, isEmpty}) {
     this.position = position;
@@ -71,11 +73,12 @@ class Tetris {
     },
   };
 
-  constructor({canvasId, scoreId, styles, sounds}) {
+  constructor({canvasId, scoreId, styles, sounds, controls}) {
     this.canvasId = canvasId;
     this.scoreId = scoreId;
     this.styles = styles;
     this.sounds = sounds;
+    this.controls = controls;
     this.isPaused = true;
     this.defaultGameSpeed = 300;
     this.maxGameSpeed = 100;
@@ -115,7 +118,7 @@ class Tetris {
 
   calculateBlockSize() {
     const {ROWS} = Tetris;
-    return Math.floor(innerHeight / ROWS - (5 % innerHeight));
+    return Math.floor(innerHeight / ROWS - 4);
   }
 
   setCanvasSize() {
@@ -132,6 +135,16 @@ class Tetris {
     this.sounds.background.volume = 0.2;
   }
 
+  async animateGameBoard() {
+    const gameBoard = this.createGameBoard();
+    for (const row of gameBoard) {
+      for (const square of row) {
+        square.draw(this.ctx);
+        await this.timeout(5);
+      }
+    }
+  }
+
   initGameBoard() {
     this.setGameBoard();
     this.drawGameBoard();
@@ -143,7 +156,11 @@ class Tetris {
 
   createGameBoard() {
     const {ROWS, COLUMNS} = Tetris;
-    const {color, borderColor, borderWidth} = this.styles.boardSquare;
+    const {
+      squareColor: color,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+    } = this.styles.board;
     const board = [];
 
     for (let indexRow = 0; indexRow < ROWS; indexRow++) {
@@ -165,16 +182,6 @@ class Tetris {
     }
 
     return board;
-  }
-
-  async animateGameBoard() {
-    const gameBoard = this.createGameBoard();
-    for (const row of gameBoard) {
-      for (const square of row) {
-        square.draw(this.ctx);
-        await this.timeout(5);
-      }
-    }
   }
 
   drawGameBoard() {
@@ -210,8 +217,10 @@ class Tetris {
   }
 
   createCanvasPiece({color, tetromino, position}) {
-    const {borderColor, borderWidth} = this.styles.boardSquare;
-    const {color: emptyColor} = this.styles.emptySquare;
+    const {
+      board: {borderColor, borderWidth},
+      emptyColor,
+    } = this.styles;
 
     const canvasPiece = tetromino.map((row, y) => {
       return row.map((value, x) => {
@@ -256,12 +265,11 @@ class Tetris {
   }
 
   checkPieceCollision(canvasPiece, y = 0, x = 0) {
-    const {color: emptyColor} = this.styles.emptySquare;
-    const {color: boardColor} = this.styles.boardSquare;
+    const {squareColor: boardColor} = this.styles.board;
     return !!canvasPiece.find((row) =>
       row.find(
         (square) =>
-          square.color !== emptyColor &&
+          !square.isEmpty &&
           this.gameBoard[square.position.y + y]?.[square.position.x + x]
             ?.color !== boardColor
       )
@@ -288,6 +296,16 @@ class Tetris {
         square.position.y = square.position.y + y;
       })
     );
+  }
+
+  drawGamePiece() {
+    const {canvasPiece: gamePiece} = this.gamePiece;
+
+    gamePiece.forEach((row) => {
+      row.forEach((square) => {
+        square.draw(this.ctx);
+      });
+    });
   }
 
   rotateTetromino(tetromino) {
@@ -349,18 +367,8 @@ class Tetris {
     this.gamePiece.canvasPiece = rotatedCanvasPiece;
   }
 
-  drawGamePiece() {
-    const {canvasPiece: gamePiece} = this.gamePiece;
-
-    gamePiece.forEach((row) => {
-      row.forEach((square) => {
-        square.draw(this.ctx);
-      });
-    });
-  }
-
   getRowsToDelete() {
-    const {color: boardColor} = this.styles.boardSquare;
+    const {squareColor: boardColor} = this.styles.board;
     const rowsToDelete = [];
 
     this.gameBoard.forEach((row, indexRow) => {
@@ -375,7 +383,11 @@ class Tetris {
 
   createEmptyRow() {
     const {COLUMNS} = Tetris;
-    const {color, borderColor, borderWidth} = this.styles.boardSquare;
+    const {
+      squareColor: color,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+    } = this.styles.board;
     const emptyRow = [];
 
     for (let indexColumn = 0; indexColumn < COLUMNS; indexColumn++) {
@@ -395,8 +407,8 @@ class Tetris {
 
   async deleteFullRows() {
     const rowsToDelete = this.getRowsToDelete();
+    const {deleteRowColor} = this.styles;
     if (!rowsToDelete.length) return;
-    console.log(rowsToDelete);
 
     this.pauseGame();
     this.sounds.background.play();
@@ -404,7 +416,9 @@ class Tetris {
     for (let rowIndex = rowsToDelete.length - 1; rowIndex >= 0; rowIndex--) {
       const indexRow = rowsToDelete[rowIndex];
 
-      this.gameBoard[indexRow].forEach((square) => (square.color = "red"));
+      this.gameBoard[indexRow].forEach(
+        (square) => (square.color = deleteRowColor)
+      );
       this.drawGameBoard();
     }
 
@@ -444,12 +458,12 @@ class Tetris {
   checkGameOver() {
     const {canvasPiece: gamePiece} = this.gamePiece;
     if (this.checkPieceCollision(gamePiece)) {
+      this.sounds.background.pause();
       this.sounds.gameOver.play();
       if (this.score > this.maxScore) {
         this.maxScore = this.score;
         window.localStorage.setItem("maxScore", this.maxScore);
       }
-      this.resetGame();
       alert(`
       GAME OVER
       SCORE:
@@ -457,6 +471,7 @@ class Tetris {
       MAX SCORE:
       ${this.maxScore}
       `);
+      this.resetGame();
     }
   }
 
@@ -499,18 +514,20 @@ class Tetris {
   }
 
   initControls() {
+    const {pause, mute, restart, rotate, moveLeft, moveDown, moveRight} =
+      this.controls;
+    const handleKey = {
+      [pause]: () => this.handlePauseGame(),
+      [mute]: () => this.handleMute(),
+      [restart]: () => this.resetGame(),
+      [rotate]: () => this.attemptRotate(),
+      [moveLeft]: () => this.attemptMoveLeft(),
+      [moveDown]: () => this.attemptMoveDown(),
+      [moveRight]: () => this.attemptMoveRight(),
+    };
     const handleKeydown = ({key}) => {
-      const handleKey = {
-        p: () => this.handlePauseGame(),
-        m: () => this.handleMute(),
-        w: () => this.attemptRotate(),
-        a: () => this.attemptMoveLeft(),
-        s: () => this.attemptMoveDown(),
-        d: () => this.attemptMoveRight(),
-      };
-
       key = key.toLowerCase();
-      if (this.isPaused && key !== "p") return;
+      if (this.isPaused && key !== pause) return;
       if (!handleKey[key]) return;
       handleKey[key]();
     };
@@ -553,18 +570,19 @@ class Tetris {
   }
 }
 
+const theme = getTheme();
+
 const tetrisStyles = {
-  boardSquare: {
-    color: "black",
-    borderColor: "white",
+  board: {
+    squareColor: theme === "light" ? "white" : "black",
+    borderColor: theme === "light" ? "black" : "white",
     borderWidth: 0.08,
   },
-  emptySquare: {
-    color: "transparent",
-    borderColor: "transparent",
-    borderWidth: 0,
-  },
+  emptyColor: "transparent",
+  pieceStyle: "fill",
+  deleteRowColor: "red",
 };
+
 const tetrisSounds = {
   background: new Audio("assets/songs/background.mp3"),
   gameOver: new Audio("assets/songs/gameOver.mp3"),
@@ -572,12 +590,55 @@ const tetrisSounds = {
   addScore: new Audio("assets/songs/addScore.mp3"),
 };
 
+const tetrisControls = {
+  rotate: "w",
+  moveLeft: "a",
+  moveDown: "s",
+  moveRight: "d",
+  pause: "p",
+  restart: "r",
+  mute: "m",
+};
+
 const tetrisProperties = {
   canvasId: "tetris",
   scoreId: "score",
   styles: tetrisStyles,
   sounds: tetrisSounds,
+  controls: tetrisControls,
 };
 
 const tetris = new Tetris(tetrisProperties);
 tetris.init();
+
+const handleColor = () => {
+  const theme = document.documentElement.getAttribute("data-theme");
+  const newSquareColor = theme === "light" ? "white" : "black";
+  const newBorderColor = theme === "light" ? "black" : "white";
+
+  if (tetris && tetris.gameBoard) {
+    tetris.gameBoard.forEach((row) =>
+      row.forEach((square) => {
+        square.borderColor = newBorderColor;
+        if (square.color === tetrisStyles.board.squareColor) {
+          square.color = newSquareColor;
+        }
+      })
+    );
+    if (tetris && tetris.gamePiece) {
+      tetris.gamePiece.canvasPiece.forEach((row) =>
+        row.forEach((square) => (square.borderColor = newBorderColor))
+      );
+    }
+    tetris.drawGameBoard();
+    tetris.drawGamePiece();
+    tetris.styles.board.squareColor = newSquareColor;
+    tetris.styles.board.borderColor = newBorderColor;
+  }
+};
+
+const mutationObserver = new MutationObserver(handleColor);
+
+mutationObserver.observe(document.documentElement, {
+  attributes: true,
+});
